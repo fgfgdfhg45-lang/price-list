@@ -153,6 +153,9 @@
 
   input[type=file]{display:none;}
 
+  /* print-only notes block, hidden on screen */
+  .print-notes{display:none;}
+
   /* cloud archive */
   .archive{
     margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;
@@ -200,11 +203,18 @@
       color-adjust: exact !important;
     }
     body{background:#fff;}
-    .toolbar,.hint,.add-row-btn,.add-cat-btn,.row-del,.cat-del-wrap,.status,.summary{display:none !important;}
+    .toolbar,.hint,.add-row-btn,.add-cat-btn,.row-del,.cat-del-wrap,.status,.summary,.archive{display:none !important;}
     .wrap{max-width:100%;padding:0;}
     .cat{break-inside:avoid;border:1px solid #ccc;box-shadow:none;}
     .cell-input{border:none !important;box-shadow:none !important;background:transparent !important;}
     .cat-head input{background:transparent !important;}
+    .print-notes{
+      display:block !important;
+      margin-top:14px;padding-top:8px;border-top:1px solid #ddd;
+      font-size:9.5pt;color:#444;break-inside:avoid;
+    }
+    .print-notes ul{margin:4px 0 0;padding-right:14px;}
+    .print-notes li{margin-bottom:3px;}
   }
 </style>
 </head>
@@ -239,6 +249,15 @@
   <div id="categories"></div>
 
   <button class="add-cat-btn" id="addCatBtn">+ إضافة مجموعة جديدة</button>
+
+  <div class="print-notes" id="printNotes">
+    <b>ملاحظات:</b>
+    <ul>
+      <li>جميع الأسعار بالدولار الأمريكي ولا تشمل الشحن أو الجمارك ما لم يُذكر غير ذلك.</li>
+      <li>جميع ماكينات التصنيع الغذائي مصنعة من استانلس ستيل غذائي درجة 304.</li>
+      <li>الأسعار قابلة للتغيير دون إشعار مسبق، ويُعتمد السعر النهائي عند إصدار عرض السعر الرسمي.</li>
+    </ul>
+  </div>
 
   <div class="archive">
     <div class="archive-head">
@@ -618,7 +637,8 @@ function buildPrintableHTML(){
         <b>ملاحظات:</b>
         <ul style="margin:4px 0 0;padding-right:14px;">
           <li>جميع الأسعار بالدولار الأمريكي ولا تشمل الشحن أو الجمارك ما لم يُذكر غير ذلك.</li>
-          <li>الأسعار قابلة للتغيير دون إشعار مسبق.</li>
+          <li>جميع ماكينات التصنيع الغذائي مصنعة من استانلس ستيل غذائي درجة 304.</li>
+          <li>الأسعار قابلة للتغيير دون إشعار مسبق، ويُعتمد السعر النهائي عند إصدار عرض السعر الرسمي.</li>
         </ul>
       </div>
     </div>
