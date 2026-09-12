@@ -464,6 +464,20 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 document.getElementById('printBtn').addEventListener('click', () => window.print());
 
+// show today's date instead of the "last saved" status when printing/exporting to PDF
+(function(){
+  const metaEl = document.getElementById('lastSaved');
+  let savedText = '';
+  window.addEventListener('beforeprint', () => {
+    savedText = metaEl.textContent;
+    const today = new Date().toLocaleDateString('ar-EG', {year:'numeric', month:'2-digit', day:'2-digit'});
+    metaEl.textContent = "التاريخ: " + today;
+  });
+  window.addEventListener('afterprint', () => {
+    metaEl.textContent = savedText;
+  });
+})();
+
 document.getElementById('exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
