@@ -101,9 +101,10 @@
   tbody tr:hover{background:#fbfaf7;}
   td{padding:7px 10px;vertical-align:middle;}
   .col-idx{width:34px;text-align:center;color:#a3a6ad;font-family:'IBM Plex Mono',monospace;font-size:12px;}
-  .col-name{width:48%;}
-  .col-model{width:24%;}
-  .col-price{width:16%;}
+  .col-name{width:38%;}
+  .col-price{width:18%;}
+  .col-qty{width:12%;}
+  .col-total{width:18%;}
   .col-del{width:34px;text-align:center;}
 
   .cell-input{
@@ -112,8 +113,12 @@
   }
   .cell-input:hover{border-color:var(--line);background:#fafaf8;}
   .cell-input:focus{outline:none;border-color:var(--orange);background:#fff;box-shadow:0 0 0 3px rgba(243,72,7,.1);}
-  .cell-input.model{font-family:'IBM Plex Mono',monospace;direction:ltr;text-align:left;font-size:12.5px;}
   .cell-input.price{font-family:'IBM Plex Mono',monospace;direction:ltr;text-align:left;font-weight:700;color:var(--navy);}
+  .cell-input.qty{font-family:'IBM Plex Mono',monospace;direction:ltr;text-align:center;font-weight:700;}
+  .cell-total{
+    width:100%;text-align:left;direction:ltr;font-weight:800;color:var(--navy);
+    font-family:'IBM Plex Mono',monospace;padding:6px 8px;
+  }
 
   .row-del{
     border:none;background:transparent;color:#c2c5cc;cursor:pointer;font-size:16px;line-height:1;
@@ -191,8 +196,13 @@
   @media (max-width:640px){
     .brand{flex-wrap:wrap;}
     .brand .meta{display:none;}
-    .col-model{display:none;}
-    thead td.col-model{display:none;}
+    .col-name{width:30%;}
+    .col-price{width:20%;}
+    .col-qty{width:14%;}
+    .col-total{width:20%;}
+    td{padding:5px 4px;}
+    .cell-input{font-size:12px;padding:5px 4px;}
+    .cell-total{font-size:12px;padding:5px 4px;}
   }
 
   /* print styles */
@@ -340,10 +350,10 @@ function render(){
       .filter(ii => {
         if(!query) return true;
         const it = cat.items[ii];
-        return (it.name||"").toLowerCase().includes(query) || (it.model||"").toLowerCase().includes(query);
+        return (it.name||"").toLowerCase().includes(query);
       });
 
-    cat.items.forEach(it => { totalCount++; totalValue += Number(it.price)||0; });
+    cat.items.forEach(it => { totalCount++; totalValue += (Number(it.price)||0) * (Number(it.qty)||1); });
 
     if(query && filteredIdx.length === 0) return;
 
@@ -363,8 +373,9 @@ function render(){
       <thead><tr>
         <td class="col-idx">م</td>
         <td class="col-name">اسم الماكينة</td>
-        <td class="col-model">كود الموديل</td>
-        <td class="col-price">السعر ($)</td>
+        <td class="col-price">سعر الوحدة ($)</td>
+        <td class="col-qty">الكمية</td>
+        <td class="col-total">الإجمالي ($)</td>
         <td class="col-del"></td>
       </tr></thead>
       <tbody></tbody>
@@ -373,17 +384,22 @@ function render(){
 
     filteredIdx.forEach((ii, displayIdx) => {
       const it = cat.items[ii];
+      if(it.qty == null) it.qty = 1;
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="col-idx">${displayIdx+1}</td>
         <td class="col-name"><input class="cell-input" data-role="name" value="${escapeAttr(it.name)}"></td>
-        <td class="col-model"><input class="cell-input model" data-role="model" value="${escapeAttr(it.model)}"></td>
         <td class="col-price"><input class="cell-input price" data-role="price" type="number" min="0" step="1" value="${Number(it.price)||0}"></td>
+        <td class="col-qty"><input class="cell-input qty" data-role="qty" type="number" min="0" step="1" value="${Number(it.qty)||1}"></td>
+        <td class="col-total"><span class="cell-total" data-role="total">${fmtMoney((Number(it.price)||0) * (Number(it.qty)||1))}</span></td>
         <td class="col-del"><button class="row-del" title="حذف الماكينة" data-role="del-item">✕</button></td>
       `;
+      const updateRowTotal = () => {
+        tr.querySelector('[data-role=total]').textContent = fmtMoney((Number(it.price)||0) * (Number(it.qty)||1));
+      };
       tr.querySelector('[data-role=name]').addEventListener('input', e => { it.name = e.target.value; saveData(); });
-      tr.querySelector('[data-role=model]').addEventListener('input', e => { it.model = e.target.value; saveData(); });
-      tr.querySelector('[data-role=price]').addEventListener('input', e => { it.price = Number(e.target.value)||0; saveData(); refreshSummaryOnly(); });
+      tr.querySelector('[data-role=price]').addEventListener('input', e => { it.price = Number(e.target.value)||0; saveData(); updateRowTotal(); refreshSummaryOnly(); });
+      tr.querySelector('[data-role=qty]').addEventListener('input', e => { it.qty = Number(e.target.value)||0; saveData(); updateRowTotal(); refreshSummaryOnly(); });
       tr.querySelector('[data-role=del-item]').addEventListener('click', () => {
         if(confirm(`متأكد إنك عايز تحذف "${it.name}"؟`)){
           cat.items.splice(ii,1);
@@ -402,7 +418,7 @@ function render(){
     addBtn.className = 'add-row-btn';
     addBtn.textContent = '+ إضافة ماكينة لهذه المجموعة';
     addBtn.addEventListener('click', () => {
-      cat.items.push({name:"ماكينة جديدة", model:"ASH-NEW", price:0});
+      cat.items.push({name:"ماكينة جديدة", price:0, qty:1});
       saveData();
       render();
     });
@@ -436,7 +452,7 @@ function render(){
 
 function refreshSummaryOnly(){
   let totalCount = 0, totalValue = 0;
-  data.forEach(cat => cat.items.forEach(it => { totalCount++; totalValue += Number(it.price)||0; }));
+  data.forEach(cat => cat.items.forEach(it => { totalCount++; totalValue += (Number(it.price)||0) * (Number(it.qty)||1); }));
   document.getElementById('statCount').textContent = totalCount;
   document.getElementById('statCats').textContent = data.length;
   document.getElementById('statTotal').textContent = fmtMoney(totalValue);
@@ -604,20 +620,23 @@ function buildPrintableHTML(){
   const now = new Date();
   const stamp = now.toLocaleDateString('en-CA');
   let totalCount = 0, totalValue = 0;
-  data.forEach(cat => cat.items.forEach(it => { totalCount++; totalValue += Number(it.price)||0; }));
+  data.forEach(cat => cat.items.forEach(it => { totalCount++; totalValue += (Number(it.price)||0) * (Number(it.qty)||1); }));
 
   let rowsHtml = '';
   let serial = 1;
   data.forEach(cat => {
     if(cat.items.length === 0) return;
-    rowsHtml += `<tr class="pcat"><td colspan="4">${escapeAttr(cat.name)}</td></tr>`;
+    rowsHtml += `<tr class="pcat"><td colspan="5">${escapeAttr(cat.name)}</td></tr>`;
     cat.items.forEach(it => {
+      const qty = Number(it.qty)||1;
+      const price = Number(it.price)||0;
       rowsHtml += `
         <tr>
           <td class="pidx">${serial}</td>
           <td class="pname">${escapeAttr(it.name)}</td>
-          <td class="pmodel">${escapeAttr(it.model)}</td>
-          <td class="pprice">${fmtMoney(it.price)}</td>
+          <td class="pprice">${fmtMoney(price)}</td>
+          <td class="pqty">${qty}</td>
+          <td class="ptotal">${fmtMoney(price*qty)}</td>
         </tr>`;
       serial++;
     });
@@ -640,10 +659,11 @@ function buildPrintableHTML(){
       <table style="width:100%;border-collapse:collapse;font-size:10.5pt;margin-top:6px;">
         <thead>
           <tr>
-            <th style="background:${NAVY_JS};color:#fff;padding:7px 4px;font-size:10px;width:8%;">م</th>
-            <th style="background:${NAVY_JS};color:#fff;padding:7px 4px;font-size:10px;width:50%;text-align:right;padding-right:10px;">اسم الماكينة</th>
-            <th style="background:${NAVY_JS};color:#fff;padding:7px 4px;font-size:10px;width:22%;">كود الموديل</th>
-            <th style="background:${NAVY_JS};color:#fff;padding:7px 4px;font-size:10px;width:20%;">السعر (دولار أمريكي)</th>
+            <th style="background:${NAVY_JS};color:#fff;padding:7px 4px;font-size:10px;width:7%;">م</th>
+            <th style="background:${NAVY_JS};color:#fff;padding:7px 4px;font-size:10px;width:42%;text-align:right;padding-right:10px;">اسم الماكينة</th>
+            <th style="background:${NAVY_JS};color:#fff;padding:7px 4px;font-size:10px;width:18%;">سعر الوحدة ($)</th>
+            <th style="background:${NAVY_JS};color:#fff;padding:7px 4px;font-size:10px;width:12%;">الكمية</th>
+            <th style="background:${NAVY_JS};color:#fff;padding:7px 4px;font-size:10px;width:21%;">الإجمالي ($)</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
@@ -661,8 +681,9 @@ function buildPrintableHTML(){
       .pcat td{ background:${ORANGE_JS}; color:#fff; font-weight:700; font-size:10.5pt; padding:6px 8px; border-top:2px solid ${NAVY_JS}; }
       .pidx{ text-align:center; color:#666; font-size:9pt; }
       .pname{ text-align:right; padding-right:10px; }
-      .pmodel{ text-align:center; direction:ltr; font-family:monospace; font-size:9pt; }
-      .pprice{ text-align:center; font-weight:700; direction:ltr; }
+      .pprice{ text-align:center; direction:ltr; }
+      .pqty{ text-align:center; font-weight:700; }
+      .ptotal{ text-align:center; font-weight:700; direction:ltr; color:${NAVY_JS}; }
       tbody tr:not(.pcat){ border-bottom:0.4pt solid #d8d8d8; }
       tbody td{ padding:6px 4px; }
     </style>
